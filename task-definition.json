@@ -1,0 +1,72 @@
+{
+  "family": "firecrawl",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::891376916216:role/ecsTaskRole",
+  "taskRoleArn": "arn:aws:iam::891376916216:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "891376916216.dkr.ecr.us-east-1.amazonaws.com/firecrawl-api:latest",
+      "essential": true,
+      "command": ["pnpm", "run", "start:production"],
+      "portMappings": [
+        {
+          "containerPort": 3002,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {"name": "NUM_WORKERS_PER_QUEUE", "value": "8"},
+        {"name": "PORT", "value": "3002"},
+        {"name": "HOST", "value": "0.0.0.0"},
+        {"name": "REDIS_URL", "value": "redis://localhost:6379"},
+        {"name": "REDIS_RATE_LIMIT_URL", "value": "redis://localhost:6379"},
+        {"name": "PLAYWRIGHT_MICROSERVICE_URL", "value": "http://localhost:3000/html"},
+        {"name": "USE_DB_AUTHENTICATION", "value": "false"},
+        {"name": "HDX_NODE_BETA_MODE", "value": "1"}
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3002/v0/health/liveness || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      }
+    },
+    {
+      "name": "redis",
+      "image": "redis:alpine",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 6379,
+          "protocol": "tcp"
+        }
+      ]
+    },
+    {
+      "name": "playwright",
+      "image": "891376916216.dkr.ecr.us-east-1.amazonaws.com/firecrawl-playwright:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {"name": "PORT", "value": "3000"}
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3000/health/liveness || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      }
+    }
+  ]
+}
