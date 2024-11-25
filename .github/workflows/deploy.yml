@@ -1,0 +1,38 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: "registry.digitalocean.com/scraper-ftr-registry"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      
+      - name: Build containers
+        run: |
+          docker build -t ${REGISTRY}/api:${GITHUB_SHA::7} ./apps/api
+          docker build -t ${REGISTRY}/playwright:${GITHUB_SHA::7} ./apps/playwright-service
+      
+      - name: Log in to DigitalOcean Container Registry
+        run: doctl registry login --expiry-seconds 1200
+      
+      - name: Push images
+        run: |
+          docker push ${REGISTRY}/api:${GITHUB_SHA::7}
+          docker push ${REGISTRY}/playwright:${GITHUB_SHA::7}
+
+      - name: Update deployment
+        run: |
+          doctl kubernetes cluster kubeconfig save scraper-ftr-cluster
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml 

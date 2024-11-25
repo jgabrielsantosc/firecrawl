@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+  namespace: scraper-ftr
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-service
+  template:
+    metadata:
+      labels:
+        app: api-service
+    spec:
+      containers:
+      - name: api
+        image: registry.digitalocean.com/scraper-ftr-registry/api:latest
+        ports:
+        - containerPort: 3002
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-connection
+              key: url
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: supabase-connection
+              key: url
+        - name: SUPABASE_ANON_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-connection
+              key: anon_key
+        - name: SUPABASE_SERVICE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-connection
+              key: service_key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playwright-service
+  namespace: scraper-ftr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: playwright-service
+  template:
+    metadata:
+      labels:
+        app: playwright-service
+    spec:
+      containers:
+      - name: playwright
+        image: registry.digitalocean.com/scraper-ftr-registry/playwright:latest
+        ports:
+        - containerPort: 3000 
